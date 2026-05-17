@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alpha Phi Alpha Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --gold: #C9A84C;
+    --gold-light: #F0C860;
+    --gold-dim: #7a6028;
+    --white: #f5f0e8;
+    --card-bg: #141414;
+    --border: rgba(201,168,76,0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 110%, rgba(201,168,76,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+
+  /* ─── SPLASH ─── */
+  #splash {
+    text-align: center;
+    gap: 20px;
+  }
+
+  .sphinx-icon {
+    font-size: 72px;
+    line-height: 1;
+    filter: drop-shadow(0 0 24px rgba(201,168,76,0.5));
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { filter: drop-shadow(0 0 16px rgba(201,168,76,0.4)); }
+    50%      { filter: drop-shadow(0 0 36px rgba(201,168,76,0.8)); }
+  }
+
+  .frat-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dim));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    font-weight: 500;
+  }
+
+  .divider {
+    width: 80px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 4px auto;
+  }
+
+  .tagline {
+    font-size: 15px;
+    color: rgba(245,240,232,0.6);
+    max-width: 320px;
+    line-height: 1.6;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    color: var(--black);
+    border: none;
+    padding: 16px 48px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn-primary:hover {
+    transform: scale(1.04);
+    filter: brightness(1.1);
+  }
+
+  .player-count-display {
+    font-size: 13px;
+    color: var(--gold-dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── PLAYER SETUP ─── */
+  #setup {
+    gap: 24px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .setup-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .player-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .player-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .player-input {
+    flex: 1;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 12px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .player-input:focus { border-color: var(--gold); }
+  .player-input::placeholder { color: rgba(245,240,232,0.3); }
+
+  .btn-add {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--gold);
+    padding: 12px 18px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+  }
+  .btn-add:hover { background: rgba(201,168,76,0.1); border-color: var(--gold); }
+
+  .btn-remove {
+    background: transparent;
+    border: 1px solid rgba(255,60,60,0.2);
+    color: rgba(255,100,100,0.7);
+    padding: 12px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .btn-remove:hover { background: rgba(255,60,60,0.1); }
+
+  /* ─── QUESTION SCREEN ─── */
+  #question-screen {
+    gap: 20px;
+    max-width: 680px;
+    width: 100%;
+  }
+
+  .q-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 0 4px;
+  }
+
+  .q-number {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+  }
+
+  .current-player-badge { display: none; }
+
+  .timer-bar-wrap {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    overflow: hidden;
+  }
+
+  .timer-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-light), var(--gold));
+    transition: width 0.1s linear;
+    width: 100%;
+  }
+
+  .question-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 28px 32px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .category-tag {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 12px;
+  }
+
+  .question-text {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 700;
+    line-height: 1.4;
+    color: var(--white);
+  }
+
+  .answers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .answer-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--white);
+    padding: 18px 16px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .answer-btn::before {
+    content: attr(data-letter);
+    position: absolute;
+    top: 8px; left: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .answer-btn .btn-text { padding-left: 18px; display: block; }
+
+  .answer-btn:hover:not(:disabled) {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.08);
+    transform: translateY(-1px);
+  }
+
+  .answer-btn.selected {
+    border-color: var(--gold-dim);
+    background: rgba(201,168,76,0.06);
+  }
+
+  .answer-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+
+  .point-flash {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Playfair Display', serif;
+    font-size: 64px;
+    font-weight: 900;
+    color: var(--gold-light);
+    pointer-events: none;
+    animation: pointFlash 1s ease-out forwards;
+    z-index: 100;
+    text-shadow: 0 0 40px rgba(201,168,76,0.8);
+  }
+  @keyframes pointFlash {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(1.4); }
+  }
+
+  /* ─── ROUND RESULT ─── */
+  #round-result {
+    gap: 24px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .result-label {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+  }
+
+  .correct-answer-reveal {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--gold-light);
+    padding: 16px 24px;
+    border: 1px solid rgba(74,222,128,0.3);
+    background: rgba(74,222,128,0.06);
+    line-height: 1.4;
+  }
+
+  .explanation-text {
+    font-size: 13px;
+    color: rgba(245,240,232,0.55);
+    line-height: 1.6;
+    max-width: 400px;
+  }
+
+  .scoreboard-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+  }
+
+  .score-name { font-size: 14px; font-weight: 500; }
+  .score-pts {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  /* ─── FINAL SCREEN ─── */
+  #final-screen {
+    gap: 24px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .trophy { font-size: 64px; animation: pulse 2s ease-in-out infinite; }
+
+  .winner-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(24px, 5vw, 40px);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .final-scoreboard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .final-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+  }
+
+  .final-row.first-place {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.08);
+  }
+
+  .rank-badge {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(201,168,76,0.1);
+    color: var(--gold-dim);
+  }
+  .final-row.first-place .rank-badge { background: var(--gold); color: var(--black); }
+
+  .final-name { font-size: 15px; font-weight: 500; flex: 1; text-align: left; margin-left: 12px; }
+  .final-pts {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .motto-footer {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    font-style: italic;
+    margin-top: 8px;
+  }
+
+  /* ─── PROGRESS DOTS ─── */
+  .progress-dots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    transition: background 0.3s;
+  }
+  .dot.done { background: var(--gold); }
+  .dot.current { background: var(--gold-light); box-shadow: 0 0 6px var(--gold); }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .answers-grid { grid-template-columns: 1fr; }
+    .question-card { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" class="screen active">
+  <div class="sphinx-icon">𓂀</div>
+  <div>
+    <div class="frat-name">Alpha Phi Alpha</div>
+    <div class="subtitle">Fraternity, Inc.</div>
+  </div>
+  <div class="divider"></div>
+  <div class="tagline">Test your knowledge before you cross. First of All, Servants of All.</div>
+  <div class="progress-dots" id="splash-dots"></div>
+  <button class="btn-primary" onclick="showSetup()">BEGIN QUIZ</button>
+  <div class="player-count-display">20 Questions • Multiple Choice • Timed</div>
+</div>
+
+<!-- PLAYER SETUP -->
+<div id="setup" class="screen">
+  <div class="sphinx-icon" style="font-size:40px">𓂀</div>
+  <div class="setup-title">Add Players</div>
+  <div class="tagline" style="font-size:13px; color:rgba(245,240,232,0.5)">Enter names for all line brothers competing</div>
+
+  <div class="player-cards" id="player-cards">
+    <div class="player-row">
+      <input class="player-input" type="text" placeholder="Player 1 name" />
+      <button class="btn-add" onclick="addPlayer()">+</button>
+    </div>
+  </div>
+
+  <button class="btn-primary" onclick="startGame()">START — FIRST OF ALL</button>
+</div>
+
+<!-- QUESTION -->
+<div id="question-screen" class="screen">
+  <div class="q-header">
+    <span class="q-number" id="q-number">Question 1 / 20</span>
+    <span class="current-player-badge" id="current-player-badge">Player 1</span>
+  </div>
+  <div class="timer-bar-wrap"><div class="timer-bar" id="timer-bar"></div></div>
+  <div class="progress-dots" id="q-dots"></div>
+  <div class="question-card">
+    <div class="category-tag" id="q-category">History</div>
+    <div class="question-text" id="q-text">Question goes here</div>
+  </div>
+  <div class="answers-grid" id="answers-grid"></div>
+</div>
+
+<!-- ROUND RESULT -->
+<div id="round-result" class="screen">
+  <div class="result-label" id="result-label">✓ Correct!</div>
+  <div class="correct-answer-reveal" id="correct-reveal"></div>
+  <div class="explanation-text" id="explanation-text"></div>
+  <div style="width:100%">
+    <div class="result-label" style="margin-bottom:10px">CURRENT SCORES</div>
+    <div class="scoreboard-mini" id="scoreboard-mini"></div>
+  </div>
+  <button class="btn-primary" id="next-btn" onclick="nextQuestion()">NEXT QUESTION →</button>
+</div>
+
+<!-- FINAL -->
+<div id="final-screen" class="screen">
+  <div class="trophy">🏆</div>
+  <div class="result-label">QUIZ COMPLETE</div>
+  <div class="winner-name" id="winner-name">Winner Name</div>
+  <div class="result-label" id="result-label-final">FINAL SCORE</div>
+  <div class="final-scoreboard" id="final-scoreboard"></div>
+  <div class="motto-footer">"First of All, Servants of All, We Shall Transcend All"</div>
+  <button class="btn-primary" onclick="restartGame()">PLAY AGAIN</button>
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    category: "History",
+    question: "On what date was Alpha Phi Alpha Fraternity, Inc. founded?",
+    answers: ["November 2, 1906", "December 4, 1906", "October 15, 1905", "January 9, 1907"],
+    correct: 1
+  },
+  {
+    category: "History",
+    question: "In what city was Alpha Phi Alpha founded?",
+    answers: ["Washington, D.C.", "Atlanta, Georgia", "Ithaca, New York", "Baltimore, Maryland"],
+    correct: 2
+  },
+  {
+    category: "History",
+    question: "Alpha Phi Alpha was the first intercollegiate Greek-letter fraternity for African American men. Which university was it founded at?",
+    answers: ["Howard University", "Yale University", "Cornell University", "Morehouse College"],
+    correct: 2
+  },
+  {
+    category: "The Jewels",
+    question: "How many men founded Alpha Phi Alpha?",
+    answers: ["Six", "Eight", "Nine", "Seven"],
+    correct: 3
+  },
+  {
+    category: "The Jewels",
+    question: "Which of the following is NOT one of the Seven Jewels?",
+    answers: ["Eugene Kinckle Jones", "Robert Harold Ogle", "Booker T. Washington", "Nathaniel Allison Murray"],
+    correct: 2
+  },
+  {
+    category: "The Jewels",
+    question: "Which Jewel has the last name 'Tandy'?",
+    answers: ["George Biddle Tandy", "Vertner Woodson Tandy", "Charles Henry Tandy", "Robert Harold Tandy"],
+    correct: 1
+  },
+  {
+    category: "The Jewels",
+    question: "Which of these names belongs to one of the Seven Jewels?",
+    answers: ["Frederick Douglas Kelley", "George Biddle Kelley", "Samuel James Kelley", "William Marcus Kelley"],
+    correct: 1
+  },
+  {
+    category: "Minnesota",
+    question: "What is the name of Alpha Phi Alpha's first Minnesota chapter?",
+    answers: ["Lambda Chapter", "Mu Chapter", "Nu Chapter", "Xi Chapter"],
+    correct: 1
+  },
+  {
+    category: "Minnesota",
+    question: "When was the first Alpha Phi Alpha chapter in Minnesota founded?",
+    answers: ["March 1, 1910", "September 8, 1911", "April 12, 1912", "June 20, 1913"],
+    correct: 2
+  },
+  {
+    category: "Minnesota",
+    question: "What was the name of the social club that grew into the Mu Chapter at the University of Minnesota?",
+    answers: ["Alpha Pi Tau", "Tau Pi Alpha", "Pi Alpha Tau", "Phi Tau Alpha"],
+    correct: 2
+  },
+  {
+    category: "Colors & Symbols",
+    question: "What are the two official colors of Alpha Phi Alpha?",
+    answers: ["Navy and Silver", "Black and Old Gold", "Crimson and Cream", "Purple and Gold"],
+    correct: 1
+  },
+  {
+    category: "Colors & Symbols",
+    question: "Which of the following colors is listed as a FORBIDDEN frat color?",
+    answers: ["Black", "Old Gold", "Brown", "Silver"],
+    correct: 2
+  },
+  {
+    category: "Colors & Symbols",
+    question: "What is the official flower of Alpha Phi Alpha?",
+    answers: ["White Carnation", "Gold Chrysanthemum", "Black-eyed Susan", "Yellow Rose"],
+    correct: 3
+  },
+  {
+    category: "Aims & Motto",
+    question: "Which of the following is one of the three official Aims of Alpha Phi Alpha?",
+    answers: ["Honor and Integrity", "Manly Deeds", "Perseverance", "Civic Duty"],
+    correct: 1
+  },
+  {
+    category: "Aims & Motto",
+    question: "Complete the motto: 'First of All, ___, We Shall Transcend All'",
+    answers: ["Leaders of All", "Servants of All", "Brothers of All", "Strongest of All"],
+    correct: 1
+  },
+  {
+    category: "Aims & Motto",
+    question: "Which word is NOT part of Alpha Phi Alpha's three Aims?",
+    answers: ["Scholarship", "Brotherhood", "Manly Deeds", "Love for All Mankind"],
+    correct: 1
+  },
+  {
+    category: "Mission",
+    question: "What does Alpha Phi Alpha's mission statement say the fraternity develops?",
+    answers: ["Scholars and Scientists", "Athletes and Coaches", "Leaders", "Lawyers and Politicians"],
+    correct: 2
+  },
+  {
+    category: "Invictus",
+    question: "Who wrote the poem 'Invictus'?",
+    answers: ["Langston Hughes", "Paul Laurence Dunbar", "Claude McKay", "William Ernest Henley"],
+    correct: 3
+  },
+  {
+    category: "Invictus",
+    question: "What does the word 'Invictus' mean in Latin?",
+    answers: ["Fearless", "Eternal", "Unconquerable", "Rising"],
+    correct: 2
+  },
+  {
+    category: "Invictus",
+    question: "Fill in the blank — last line of Invictus: 'I am the captain of my ___'",
+    answers: ["fate", "heart", "mind", "soul"],
+    correct: 3
+  }
+];
+
+let players = [];
+let scores = {};
+let currentQ = 0;
+let currentPlayerIdx = 0;
+let timerInterval = null;
+let timeLeft = 20;
+const POINTS = 100;
+const TIME_LIMIT = 20;
+
+// Build progress dots
+function buildDots(containerId, total, current) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < current ? ' done' : i === current ? ' current' : '');
+    c.appendChild(d);
+  }
+}
+
+// Show/hide screens
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showSetup() { show('setup'); }
+
+function addPlayer() {
+  const cards = document.getElementById('player-cards');
+  const count = cards.querySelectorAll('.player-row').length + 1;
+  const row = document.createElement('div');
+  row.className = 'player-row';
+  row.innerHTML = `
+    <input class="player-input" type="text" placeholder="Player ${count} name" />
+    <button class="btn-remove" onclick="removePlayer(this)">✕</button>
+  `;
+  cards.appendChild(row);
+}
+
+function removePlayer(btn) {
+  const rows = document.querySelectorAll('.player-row');
+  if (rows.length > 1) btn.closest('.player-row').remove();
+}
+
+function startGame() {
+  const inputs = document.querySelectorAll('.player-input');
+  players = [];
+  inputs.forEach((inp, i) => {
+    const name = inp.value.trim() || `Player ${i + 1}`;
+    players.push(name);
+  });
+  scores = {};
+  players.forEach(p => scores[p] = 0);
+  currentQ = 0;
+  currentPlayerIdx = 0;
+  showQuestion();
+}
+
+function showQuestion() {
+  if (currentQ >= QUESTIONS.length) { showFinal(); return; }
+  const q = QUESTIONS[currentQ];
+  show('question-screen');
+  buildDots('q-dots', QUESTIONS.length, currentQ);
+  document.getElementById('q-number').textContent = `Question ${currentQ + 1} / ${QUESTIONS.length}`;
+  document.getElementById('current-player-badge').textContent = players[currentPlayerIdx % players.length];
+  document.getElementById('q-category').textContent = q.category;
+  document.getElementById('q-text').textContent = q.question;
+
+  const grid = document.getElementById('answers-grid');
+  grid.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  q.answers.forEach((ans, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.setAttribute('data-letter', letters[i]);
+    btn.innerHTML = `<span class="btn-text">${ans}</span>`;
+    btn.onclick = () => selectAnswer(i, btn);
+    grid.appendChild(btn);
+  });
+
+  // Timer
+  clearInterval(timerInterval);
+  timeLeft = TIME_LIMIT;
+  updateTimerBar(100);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerBar((timeLeft / TIME_LIMIT) * 100);
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      revealAnswer(-1);
+    }
+  }, 1000);
+}
+
+function updateTimerBar(pct) {
+  const bar = document.getElementById('timer-bar');
+  bar.style.width = pct + '%';
+  bar.style.background = pct > 50
+    ? 'linear-gradient(90deg, #F0C860, #C9A84C)'
+    : pct > 25
+      ? 'linear-gradient(90deg, #d97706, #b45309)'
+      : 'linear-gradient(90deg, #ef4444, #b91c1c)';
+}
+
+function selectAnswer(idx, btn) {
+  clearInterval(timerInterval);
+  const q = QUESTIONS[currentQ];
+  const allBtns = document.querySelectorAll('.answer-btn');
+  allBtns.forEach(b => b.disabled = true);
+  btn.classList.add('selected');
+
+  if (idx === q.correct) {
+    const player = players[currentPlayerIdx % players.length];
+    const pts = Math.max(50, Math.round(POINTS * (timeLeft / TIME_LIMIT)));
+    scores[player] += pts;
+  }
+
+  setTimeout(() => revealAnswer(idx), 400);
+}
+
+function flashPoints(text) {
+  const el = document.createElement('div');
+  el.className = 'point-flash';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function revealAnswer(selectedIdx) {
+  clearInterval(timerInterval);
+  const q = QUESTIONS[currentQ];
+  const correct = selectedIdx === q.correct;
+  const timedOut = selectedIdx === -1;
+
+  show('round-result');
+
+  document.getElementById('result-label').textContent =
+    timedOut ? '⏱ Time\'s Up!' : correct ? '✓ Correct!' : '✗ Incorrect';
+  document.getElementById('result-label').style.color =
+    timedOut ? '#f59e0b' : correct ? '#4ade80' : '#f87171';
+
+  const revealEl = document.getElementById('correct-reveal');
+  if (correct) {
+    revealEl.textContent = 'Keep it up — stay sharp.';
+    revealEl.style.borderColor = 'rgba(74,222,128,0.25)';
+    revealEl.style.color = 'rgba(245,240,232,0.6)';
+    revealEl.style.fontSize = '14px';
+  } else {
+    revealEl.innerHTML = `<span style="font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold-dim);display:block;margin-bottom:8px">Correct Answer</span>${q.answers[q.correct]}`;
+    revealEl.style.borderColor = 'rgba(201,168,76,0.4)';
+    revealEl.style.color = 'var(--gold-light)';
+    revealEl.style.fontSize = '18px';
+  }
+  document.getElementById('explanation-text').textContent = '';
+
+  // Score
+  const sb = document.getElementById('scoreboard-mini');
+  sb.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = 'score-row';
+  row.innerHTML = `<span class="score-name">Score</span><span class="score-pts">${scores[players[0]]}</span>`;
+  sb.appendChild(row);
+}
+
+function nextQuestion() {
+  currentPlayerIdx++;
+  currentQ++;
+  showQuestion();
+}
+
+function showFinal() {
+  show('final-screen');
+  const total = players[0];
+  const pts = scores[players[0]];
+  const pct = Math.round((pts / (QUESTIONS.length * POINTS)) * 100);
+  document.getElementById('winner-name').textContent = pts + ' pts';
+
+  const fsb = document.getElementById('final-scoreboard');
+  fsb.innerHTML = `
+    <div class="final-row first-place" style="justify-content:center; flex-direction:column; gap:8px; padding:20px">
+      <div style="font-size:13px; letter-spacing:0.2em; color:var(--gold-dim); text-transform:uppercase">You scored</div>
+      <div style="font-family:'Playfair Display',serif; font-size:48px; font-weight:900; color:var(--gold-light)">${pts}</div>
+      <div style="font-size:13px; color:rgba(245,240,232,0.5)">out of ${QUESTIONS.length * POINTS} possible points (${pct}%)</div>
+    </div>
+  `;
+}
+
+function restartGame() {
+  scores[players[0]] = 0;
+  currentQ = 0;
+  currentPlayerIdx = 0;
+  showQuestion();
+}
+
+// Go straight to questions
+players = ['Player 1'];
+scores = { 'Player 1': 0 };
+currentQ = 0;
+currentPlayerIdx = 0;
+showQuestion();
+</script>
+</body>
+</html>
